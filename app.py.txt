@@ -1,0 +1,90 @@
+import streamlit as st
+import pickle
+import numpy as np
+import pandas as pd
+import os
+
+model_directory = r'C:\Users\Manoj\OneDrive\Desktop\loan'
+model_filename = 'my_trained_model.pkl'
+model_path = os.path.join(model_directory, model_filename)
+
+model = None
+try:
+    with open(model_path, 'rb') as file:
+        model = pickle.load(file)
+    st.success("Model loaded successfully!")
+except FileNotFoundError:
+    st.error(f"Error: Model file not found at {model_path}. Please ensure the filename is '{model_filename}' and the path is correct.")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.stop()
+
+
+st.set_page_config(page_title="Loan Approval Predictor", layout="centered")
+
+st.title("💰 Loan Approval Predictor")
+st.markdown("Automate loan eligibility based on applicant details.")
+st.markdown("---")
+
+st.header("Applicant Details")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    no_of_dependents = st.number_input("Number of Dependents", min_value=0, max_value=10, value=0, step=1)
+    education = st.selectbox("Education", ["Graduate", "Not Graduate"])
+    self_employed = st.selectbox("Self Employed", ["Yes", "No"])
+    income_annum = st.number_input("Annual Income ($)", min_value=0, value=500000, step=10000)
+
+with col2:
+    loan_amount = st.number_input("Loan Amount ($)", min_value=10000, value=500000, step=5000)
+    loan_term = st.number_input("Loan Term (Years)", min_value=1, max_value=30, value=10, step=1)
+    cibil_score = st.number_input("CIBIL Score", min_value=300, max_value=900, value=700, step=1)
+    Assets = st.number_input("Total Assets Value ($)", min_value=0, value=1000000, step=10000)
+
+
+st.markdown("---")
+
+def preprocess_input(no_of_dependents, education, self_employed, income_annum,
+                     loan_amount, loan_term, cibil_score, Assets):
+
+    education_map = {"Graduate": 1, "Not Graduate": 0}
+    self_employed_map = {"Yes": 1, "No": 0}
+
+    features = {
+        'no_of_dependents': no_of_dependents,
+        'education': education_map[education],
+        'self_employed': self_employed_map[self_employed],
+        'income_annum': income_annum,
+        'loan_amount': loan_amount,
+        'loan_term': loan_term,
+        'cibil_score': cibil_score,
+        'Assets': Assets
+    }
+
+    input_df = pd.DataFrame([features])
+
+    return input_df
+
+if st.button("Predict Loan Approval"):
+    if model is not None:
+        input_data = preprocess_input(no_of_dependents, education, self_employed, income_annum,
+                                      loan_amount, loan_term, cibil_score, Assets)
+
+        try:
+            prediction = model.predict(input_data)
+
+            st.header("Prediction Result:")
+            if prediction[0] == 1:
+                st.success("🎉 **Loan Approved!**")
+            else:
+                st.error("❌ **Loan Rejected.**")
+        except Exception as e:
+            st.error(f"An error occurred during prediction: {e}")
+            st.warning("Please ensure the input features match what your model expects and any necessary preprocessing (like scaling) is correctly applied.")
+    else:
+        st.warning("Model not loaded. Cannot make a prediction.")
+
+st.markdown("---")
+st.caption("Developed as a Loan Approval Predictor demo.")
